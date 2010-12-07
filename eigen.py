@@ -115,35 +115,38 @@ def solve_eig_pysparse(A, B, n_eigs=4, verbose=False):
         eigs.append(vec)
     return r
 
-def solve_eig_newton(A, x0=None, eps=1e-6, max_iter=5, debug=True):
+def solve_eig_newton(A, x0=None, eps=1e-6, max_iter=100, debug=True):
     from numpy.linalg import norm, solve
-    from numpy import dot, bmat, array
+    from numpy import dot, bmat, array, eye
     if x0 is None:
         raise NotImplementedError()
     A = A.todense()
 
     def get_s(x, lam):
-        s = bmat([x, array([lam])])
-        return s.T
+        s = bmat([
+            [ x              ],
+            [ array([[lam]]) ],
+            ])
+        return s
 
-    def get_x_lam(s):
+    def get_lam_x(s):
         n = len(s)-1
         x = s[:n]
         lam = s[n]
         lam = lam[0, 0]
-        return x, lam
+        return lam, x
 
     def get_jacobian(s):
-        x, lam = get_x_lam(s)
+        lam, x = get_lam_x(s)
 
         J = bmat([
-            [ A - array([[lam]]), -x           ],
-            [ 2 * x.T           , array([[0]]) ],
+            [ A - lam * eye(len(A)), -x           ],
+            [ 2 * x.T              , array([[0]]) ],
             ])
         return J
 
     def get_residual(s):
-        x, lam = get_x_lam(s)
+        lam, x = get_lam_x(s)
 
         res = bmat([
             [ dot(A, x) - lam * x        ],
@@ -159,6 +162,7 @@ def solve_eig_newton(A, x0=None, eps=1e-6, max_iter=5, debug=True):
     if debug:
         print "Start vector:", x
         print "Start lambda:", lam
+    x = array([x]).T
 
     s = get_s(x, lam)
     for j in range(max_iter):
@@ -170,17 +174,11 @@ def solve_eig_newton(A, x0=None, eps=1e-6, max_iter=5, debug=True):
 
         J = get_jacobian(s)
         res = get_residual(s)
-        if debug:
-            print "Residual:"
-            print res
         h = solve(J, -res)
-        print h
-        print s
-        print "adding:"
         s += h
-        print s
 
         if debug:
-            print "  Norm:", norm(res)
+            print "  Norm of the residual:", norm(res)
         if norm(res) < eps:
             break
+    return get_lam_x(s)

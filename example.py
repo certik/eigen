@@ -18,7 +18,13 @@ def main():
     print "-"*80
     n = len(A)
     one = eye(n)
-    print solve_eig_numpy(csc_matrix(A), csc_matrix(one))
-    print solve_eig_newton(csc_matrix(A), x0=array([0.7, 0.1, 0.3, 0.4]))
+    Q = solve_eig_numpy(csc_matrix(A), csc_matrix(one))
+    lam, x = Q[3]
+    x = array(x.flat)
+    print lam, x
+    x = array([ 1, 2, 3, 4])
+    lam, x = solve_eig_newton(csc_matrix(A), x0=x, eps=1e-10, debug=True)
+    print "newton:"
+    print lam, array(x.flat)
 
 main()
